@@ -36,11 +36,11 @@ Exactly **five** deterministic checks — small enough to build in two days, val
 
 ```mermaid
 flowchart LR
-    A[Ingest\nCSV / PDF upload] --> B[Extract\nGemini → structured JSON]
-    B --> C[Normalize\ndeterministic cleanup]
-    C --> D[Detect\n5 deterministic rules]
-    D --> E[Explain\nGemini writes CFO-ready explanation]
-    E --> F[Act\nApprove / Reject / Recover + audit log]
+    A["Ingest<br/>CSV / PDF upload"] --> B["Extract<br/>Gemini → structured JSON"]
+    B --> C["Normalize<br/>deterministic cleanup"]
+    C --> D["Detect<br/>5 deterministic rules"]
+    D --> E["Explain<br/>Gemini writes CFO-ready explanation"]
+    E --> F["Act<br/>Approve / Reject / Recover + audit log"]
 ```
 
 ### Explainability is the moat

@@ -12,21 +12,21 @@ This is what makes LedgerLens **audit-ready** — and it is the architectural an
 ```mermaid
 flowchart TB
     subgraph Client
-        UI[React Dashboard\nUpload · Findings · Finding Detail · Memo]
+        UI["React Dashboard<br/>Upload · Findings · Finding Detail · Memo"]
     end
 
-    subgraph Backend[FastAPI backend on Cloud Run]
-        ING[ingest/\nupload CSV & PDF, store raw file]
-        EXT[extract/\nGemini 2.5 Flash → structured JSON\nPDF/scan → vendor, lines, totals]
-        NRM[normalize/\ndeterministic cleanup:\nvendor names, SKUs, currency, tax codes]
-        DET[detect/\nR1–R5 pure deterministic rules\n+ confidence + evidence refs]
-        EXP[explain/\nGemini writes CFO-ready explanation\nfrom rule evidence JSON]
-        WF[workflow/\napprove · reject · request docs · memo]
+    subgraph Backend["FastAPI backend on Cloud Run"]
+        ING["ingest/<br/>upload CSV & PDF, store raw file"]
+        EXT["extract/<br/>Gemini 2.5 Flash → structured JSON<br/>PDF/scan → vendor, lines, totals"]
+        NRM["normalize/<br/>deterministic cleanup:<br/>vendor names, SKUs, currency, tax codes"]
+        DET["detect/<br/>R1–R5 pure deterministic rules<br/>+ confidence + evidence refs"]
+        EXP["explain/<br/>Gemini writes CFO-ready explanation<br/>from rule evidence JSON"]
+        WF["workflow/<br/>approve · reject · request docs · memo"]
     end
 
-    DB[(SQLite MVP → Cloud SQL)]
-    FS[(uploads/ → Cloud Storage)]
-    LOG[(audit log table)]
+    DB[("SQLite MVP → Cloud SQL")]
+    FS[("uploads/ → Cloud Storage")]
+    LOG[("audit log table")]
 
     UI --> ING
     ING --> FS

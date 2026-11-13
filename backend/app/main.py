@@ -2,7 +2,7 @@
 
 Endpoint status (see docs/07_BUILD_PLAN.md for who implements what):
   [done] GET  /health
-  [done] POST /api/ingest/upload            — stores file, creates batch
+  [done] POST /api/ingest/upload            — stores file, validates CSV, creates batch
   [done] POST /api/run/{batch_id}/detect    — normalize + R1..R5 over the DB
   [done] GET  /api/findings                 — exception queue
   [done] GET  /api/findings/{id}            — finding + evidence detail
@@ -13,8 +13,6 @@ Endpoint status (see docs/07_BUILD_PLAN.md for who implements what):
 from __future__ import annotations
 
 import json
-import shutil
-import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -22,6 +20,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from . import config
 from .db import get_connection, init_schema
+from .ingest.router import VALID_KINDS, save_stream_to_upload, validate_csv
 from .models import DecisionIn
 from .services import build_memo, record_decision, run_detection
 
@@ -48,23 +47,20 @@ def health() -> dict:
 
 @app.post("/api/ingest/upload")
 async def upload(kind: str = Form(...), file: UploadFile = File(...)) -> dict:
-    """Store an uploaded CSV/PDF and register a batch (docs/05 §upload)."""
-    if kind not in {"invoices", "purchase_orders", "contracts", "payments", "payment_ledger"}:
+    """Store an uploaded CSV/PDF, validate CSV headers, register a batch (docs/05)."""
+    if kind not in VALID_KINDS:
         raise HTTPException(status_code=400, detail=f"unknown kind: {kind}")
-
-    upload_dir = Path(config.UPLOAD_DIR)
-    upload_dir.mkdir(parents=True, exist_ok=True)
 
     conn = get_connection()
     try:
         cur = conn.execute("SELECT COUNT(*) AS n FROM batches")
         batch_id = f"B-{cur.fetchone()['n'] + 1:04d}"
-        dest = upload_dir / f"{batch_id}-{Path(file.filename or 'upload').name}"
-        with dest.open("wb") as out:
-            shutil.copyfileobj(file.file, out)
+        dest = save_stream_to_upload(file.file, file.filename or "upload", batch_id)
 
+        problems: list[str] = []
         rows_detected = 0
         if dest.suffix.lower() == ".csv":
+            problems = validate_csv(dest, kind)
             with dest.open("r", encoding="utf-8", errors="replace") as fh:
                 rows_detected = max(sum(1 for _ in fh) - 1, 0)
 
@@ -75,7 +71,7 @@ async def upload(kind: str = Form(...), file: UploadFile = File(...)) -> dict:
         )
         conn.commit()
         return {"batch_id": batch_id, "kind": kind, "stored": str(dest),
-                "rows_detected": rows_detected}
+                "rows_detected": rows_detected, "problems": problems}
     finally:
         conn.close()
 
@@ -92,8 +88,8 @@ def run_extract(batch_id: str) -> dict:
 def run_detect(batch_id: str) -> dict:
     conn = get_connection()
     try:
-        conn.execute("UPDATE batches SET state = 'detected' WHERE batch_id = ?", (batch_id,))
         result = run_detection(conn)
+        conn.execute("UPDATE batches SET state = 'detected' WHERE batch_id = ?", (batch_id,))
         conn.commit()
         result["batch_id"] = batch_id
         return result

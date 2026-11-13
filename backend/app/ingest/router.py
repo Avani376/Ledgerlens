@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import io
+import shutil
 from pathlib import Path
 
 from .. import config
@@ -17,6 +18,8 @@ REQUIRED_COLUMNS = {
     "contracts": {"contract_id", "vendor_id", "item", "contracted_unit_price"},
     "payments": {"payment_id", "invoice_number", "amount", "currency"},
 }
+# A raw bank/payment ledger export uses the same minimal shape as payments.
+REQUIRED_COLUMNS["payment_ledger"] = REQUIRED_COLUMNS["payments"]
 
 
 def validate_csv(path: Path, kind: str) -> list[str]:
@@ -39,19 +42,13 @@ def save_stream_to_upload(fileobj, original_name: str, batch_id: str) -> Path:
     upload_dir = Path(config.UPLOAD_DIR)
     upload_dir.mkdir(parents=True, exist_ok=True)
     dest = upload_dir / f"{batch_id}-{Path(original_name or 'upload').name}"
+    fileobj.seek(0)
     with dest.open("wb") as out:
-        fileobj.seek(0)
-        shutil_copy(fileobj, out)
+        shutil.copyfileobj(fileobj, out)
     return dest
 
 
-def shutil_copy(fileobj, out) -> None:
-    import shutil
-
-    shutil.copyfileobj(fileobj, out)
-
-
 def parse_csv_bytes(data: bytes) -> list[dict]:
-    """Minimal CSV -> dict rows (used by the extract stage for CSV batches)."""
+    """CSV bytes -> dict rows (used by the extract stage for CSV batches)."""
     reader = csv.DictReader(io.StringIO(data.decode("utf-8", errors="replace")))
     return [dict(row) for row in reader]
