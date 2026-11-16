@@ -4,8 +4,8 @@ SQLite is the MVP choice; the schema is portable to Cloud SQL without redesign.
 """
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
+import sqlite3
 
 from . import config
 
@@ -37,3 +37,10 @@ def init_db(db_path: str | None = None) -> None:
         init_schema(conn)
     finally:
         conn.close()
+
+
+# Ensure default local database schema is initialized
+try:
+    init_db()
+except Exception:
+    pass
