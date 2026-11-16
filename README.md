@@ -118,9 +118,9 @@ uvicorn app.main:app --reload
 
 ```bash
 cd frontend
-npm create vite@latest app -- --template react
-cd app && npm install && npm install tailwindcss
+npm install
 npm run dev
+# -> http://localhost:5173
 ```
 
 Full setup walkthrough (including getting a Gemini API key): see **docs/07_BUILD_PLAN.md** and the offline context pack.
